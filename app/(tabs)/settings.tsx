@@ -19,7 +19,7 @@ import { INTERESTS } from "../(onboard)/interests";
 import { signOut } from "firebase/auth";
 import { useRouter } from "expo-router";
 
-type UserInfo = {
+export type UserInfo = {
   name: string;
   username: string;
   discriminator: string;

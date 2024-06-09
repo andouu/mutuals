@@ -23,7 +23,9 @@
         "backgroundColor": "#ffffff"
       },
       "backgroundColor": "#ffffff",
-      "permissions": ["android.permission.RECORD_AUDIO"],
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "package": "com.andou.mutuals"
     },
     "web": {
@@ -57,6 +59,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/e68cdf67-a8d6-4ea4-aa5d-b0fd726a7549"
-    }
+    },
+    "owner": "mutuo"
   }
 }

@@ -6,7 +6,9 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
   where,
@@ -14,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -26,6 +29,9 @@ import { INTERESTS } from "../(onboard)/interests";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { UserInfo } from "./settings";
+import { storage } from "@/firebase/fireStorage";
+import { getDownloadURL, ref } from "firebase/storage";
 
 type Invite = {
   status: "pending" | "accepted" | "rejected";
@@ -39,8 +45,14 @@ type Invite = {
   inviteeUids: string[];
 };
 
+type Friendship = {
+  userUid: string;
+  friendUid: string;
+};
+
 export default function Invites() {
   const [invite, setInvite] = useState<Invite>();
+  const [friends, setFriends] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [selectedInterest, setSelectedInterest] = useState<string>();
@@ -48,6 +60,11 @@ export default function Invites() {
   const [selectedWhere, setSelectedWhere] = useState<string>("");
   const [selectedInvitees, setSelectedInvitees] = useState<number>();
   const [sendingInvites, setSendingInvites] = useState<boolean>(false);
+
+  const [inviteParsed, setInviteParsed] = useState<{
+    host: UserInfo & { pfpB64: string; uid: string };
+    users: (UserInfo & { pfpB64: string; uid: string })[];
+  }>();
 
   const handleSelectInterest = (interestId: string) => {
     setSelectedInterest(interestId);
@@ -70,34 +87,52 @@ export default function Invites() {
         !selectedWhen ||
         !selectedWhere ||
         !selectedInvitees ||
-        !auth.currentUser
+        !auth.currentUser ||
+        friends.length === 0
       ) {
         return;
       }
 
       setSendingInvites(true);
 
-      // TODO: Call the server here to get the recommendations (as user IDs)
-      // const inviteeUids: string[] = await fetch('http://localhost:6969', {
-
-      // });
       const inviteeUids: string[] = [];
+      const inviteeSet = new Set();
+      while (inviteeUids.length < Math.min(friends.length, selectedInvitees)) {
+        let selectedUser;
+        do {
+          selectedUser = friends[Math.floor(Math.random() * friends.length)];
+          console.log(selectedUser);
+        } while (inviteeSet.has(selectedUser));
+
+        inviteeUids.push(selectedUser);
+        inviteeSet.add(selectedUser);
+      }
+
+      const eventDetails = {
+        activityId: selectedInterest,
+        when: Timestamp.fromDate(selectedWhen),
+        where: selectedWhere,
+      };
 
       for (const inviteeUid of inviteeUids) {
         const newInvite: Invite = {
           status: "pending",
-          eventDetails: {
-            activityId: selectedInterest,
-            when: Timestamp.fromDate(selectedWhen),
-            where: selectedWhere,
-          },
+          eventDetails,
           hostUid: auth.currentUser.uid,
           inviteeUid,
           inviteeUids,
         };
 
-        setDoc(doc(db, "invites", inviteeUid), newInvite);
+        await setDoc(doc(db, "invites", inviteeUid), newInvite);
       }
+
+      await setDoc(doc(db, "invites", auth.currentUser.uid), {
+        status: "accepted",
+        eventDetails,
+        hostUid: auth.currentUser.uid,
+        inviteeUid: auth.currentUser.uid,
+        inviteeUids,
+      });
     } catch (err) {
       console.error(err);
     } finally {
@@ -106,7 +141,7 @@ export default function Invites() {
   };
 
   useEffect(() => {
-    const getInvite = async () => {
+    const getFriends = async () => {
       try {
         if (!auth.currentUser) {
           return;
@@ -114,15 +149,14 @@ export default function Invites() {
 
         setLoading(true);
 
-        const inviteQuery = query(
-          collection(db, "invites"),
-          where("inviteeUid", "==", auth.currentUser.uid),
-          where("hostUid", "==", auth.currentUser.uid)
+        const friendsSnapshot = await getDocs(
+          query(
+            collection(db, "friends"),
+            where("userUid", "==", auth.currentUser.uid)
+          )
         );
-        const snapshot = await getDocs(inviteQuery);
-        if (snapshot.size > 0) {
-          setInvite(snapshot.docs[0].data() as Invite);
-        }
+
+        setFriends(friendsSnapshot.docs.map((doc) => doc.data().friendUid));
       } catch (err) {
         console.error(err);
       } finally {
@@ -130,8 +164,55 @@ export default function Invites() {
       }
     };
 
-    getInvite();
+    if (!auth.currentUser) {
+      return;
+    }
+
+    getFriends();
+
+    const inviteRef = doc(db, "invites", auth.currentUser.uid);
+    const unsubscribe = onSnapshot(inviteRef, (snapshot) => {
+      setLoading(true);
+      setInvite(snapshot.data() as Invite);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!invite) {
+      return;
+    }
+
+    const fetchDetails = async () => {
+      const userUids = [invite.hostUid, ...invite.inviteeUids];
+
+      const metadatas = await Promise.all(
+        userUids.map(async (uid) => {
+          const userInfo = await getDoc(doc(db, "users", uid));
+          const pfpRef = ref(storage, uid + ".jpg");
+          const pfpUrl = await getDownloadURL(pfpRef);
+
+          const pfpRes = await fetch(pfpUrl);
+          const pfpB64 = await pfpRes.text();
+          return { ...userInfo.data(), pfpB64, uid } as UserInfo & {
+            pfpB64: string;
+            uid: string;
+          };
+        })
+      );
+
+      setInviteParsed({
+        host: metadatas[0],
+        users: metadatas.slice(1),
+      });
+    };
+
+    fetchDetails();
+  }, [invite]);
 
   if (loading) {
     return (
@@ -142,7 +223,11 @@ export default function Invites() {
   }
 
   const canInvite =
-    selectedInterest && selectedWhen && selectedWhere && selectedInvitees;
+    selectedInterest &&
+    selectedWhen &&
+    selectedWhere &&
+    selectedInvitees &&
+    friends.length > 0;
 
   return (
     <ThemedView
@@ -150,9 +235,10 @@ export default function Invites() {
     >
       <SafeAreaView>
         <View style={styles.wrapper}>
-          <Text style={styles.title}>{invite ? "New Invite!" : "Invites"}</Text>
           {!invite ? (
             <>
+              <Text style={styles.title}>Invites</Text>
+
               <Text style={styles.description}>
                 It looks like you don't have any invites.
               </Text>
@@ -293,10 +379,106 @@ export default function Invites() {
                 onPress={handleSendInvites}
                 disabled={!canInvite}
               >
-                <Text style={styles.sendButtonText}>Send Invites</Text>
+                {sendingInvites ? (
+                  <ActivityIndicator />
+                ) : (
+                  <Text style={styles.sendButtonText}>Send Invites</Text>
+                )}
               </Pressable>
             </>
-          ) : null}
+          ) : invite.status === "pending" || true ? (
+            <>
+              <Text style={styles.title}>New Invite!</Text>
+              <View style={styles.meta}>
+                <Text style={styles.heading}>
+                  Activity —{" "}
+                  {
+                    INTERESTS[
+                      INTERESTS.findIndex(
+                        (interest) =>
+                          interest.id === invite.eventDetails.activityId
+                      )
+                    ].name
+                  }
+                </Text>
+                <View style={styles.whenWhere}>
+                  <View style={styles.metaDetail}>
+                    <Text style={styles.metaLabel}>When</Text>
+                    <Text style={styles.metaData}>
+                      {invite.eventDetails.when.toDate().toLocaleDateString()} @{" "}
+                      {invite.eventDetails.when
+                        .toDate()
+                        .toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                    </Text>
+                  </View>
+                  <View style={styles.metaDetail}>
+                    <Text style={styles.metaLabel}>Where</Text>
+                    <Text style={styles.metaData}>
+                      {invite.eventDetails.where}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.host}>
+                  <Text style={styles.metaLabel}>Host</Text>
+                  <View style={styles.hostUser}>
+                    <Image
+                      style={styles.hostPfp}
+                      source={{
+                        uri: `data:image/jpeg;base64,${inviteParsed?.host.pfpB64}`,
+                      }}
+                    />
+                    <Text style={styles.hostUsername}>
+                      {inviteParsed?.host.name}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.attendeesHeading}>
+                {invite.inviteeUids.length + 1} Invites
+              </Text>
+              <View style={styles.inviteeList}>
+                <View style={styles.invitee}>
+                  <Image
+                    style={styles.inviteePfp}
+                    source={{
+                      uri: `data:image/jpeg;base64,${
+                        inviteParsed?.host.pfpB64 || ""
+                      }`,
+                    }}
+                  />
+                  <Text style={styles.inviteeName}>
+                    {inviteParsed?.host.username}
+                  </Text>
+                </View>
+                {invite.inviteeUids.map((inviteeUid) => (
+                  <View key={inviteeUid} style={styles.invitee}>
+                    <Image
+                      style={styles.inviteePfp}
+                      source={{
+                        uri: `data:image/jpeg;base64,${
+                          inviteParsed?.users.find(
+                            (user) => user.uid === inviteeUid
+                          )?.pfpB64 || ""
+                        }`,
+                      }}
+                    />
+                    <Text style={styles.inviteeName}>
+                      {inviteParsed?.users.find(
+                        (user) => user.uid === inviteeUid
+                      )?.username || ""}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>Event Details</Text>
+            </>
+          )}
         </View>
       </SafeAreaView>
     </ThemedView>
@@ -384,5 +566,73 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: "white",
     fontFamily: "NeueMontrealMedium",
+  },
+  meta: {},
+  heading: {
+    marginBottom: 10,
+    fontFamily: "NeueMontrealMedium",
+    fontSize: 18,
+  },
+  whenWhere: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  metaDetail: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  metaLabel: {
+    fontFamily: "NeueMontrealMedium",
+    fontSize: 16,
+  },
+  metaData: {
+    fontFamily: "NeueMontrealBook",
+  },
+  host: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 5,
+    gap: 10,
+  },
+  hostUser: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  hostPfp: {
+    width: 30,
+    height: 30,
+    borderRadius: 99,
+    overflow: "hidden",
+  },
+  hostUsername: {
+    fontFamily: "NeueMontrealBook",
+  },
+  attendeesHeading: {
+    marginTop: 20,
+    marginBottom: 5,
+    color: GLOBAL_COLORS.darkGray,
+    fontFamily: "NeueMontrealMedium",
+    fontSize: 14,
+  },
+  inviteeList: {
+    marginTop: 10,
+    gap: 10,
+  },
+  invitee: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+  },
+  inviteePfp: {
+    width: 35,
+    height: 35,
+    borderRadius: 99,
+  },
+  inviteeName: {
+    fontFamily: "NeueMontrealMedium",
+    fontSize: 18,
   },
 });
