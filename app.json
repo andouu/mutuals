@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
@@ -14,14 +14,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "bundleIdentifier": "com.andou.mutuals"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "permissions": ["android.permission.RECORD_AUDIO"],
+      "package": "com.andou.mutuals"
     },
     "web": {
       "bundler": "metro",
@@ -40,6 +43,20 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "e68cdf67-a8d6-4ea4-aa5d-b0fd726a7549"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e68cdf67-a8d6-4ea4-aa5d-b0fd726a7549"
     }
   }
 }

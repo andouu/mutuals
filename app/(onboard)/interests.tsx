@@ -18,7 +18,7 @@ type Interest = {
   name: string;
 };
 
-const INTERESTS: Interest[] = [
+export const INTERESTS: Interest[] = [
   {
     id: "poker",
     name: "Poker",
@@ -82,7 +82,7 @@ export default function Interests() {
   };
 
   return (
-    <View style={{ height: "100%" }}>
+    <View style={{ width: "100%", height: "100%", backgroundColor: "white" }}>
       <SafeAreaView style={{ height: "100%" }}>
         <View style={styles.wrapper}>
           <Text style={styles.title}>Interests</Text>
@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: GLOBAL_CONSTANTS.px,
+    backgroundColor: "white",
   },
   title: {
     marginBottom: -5,
@@ -159,8 +160,8 @@ const styles = StyleSheet.create({
   },
   interestContainer: {
     flexDirection: "row",
-    gap: 10,
     flexWrap: "wrap",
+    gap: 10,
   },
   interestWrapper: {
     borderWidth: 1.5,

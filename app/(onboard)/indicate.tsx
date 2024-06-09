@@ -8,7 +8,7 @@ export default function Indicate() {
   const goNext = () => router.replace("/details");
 
   return (
-    <View style={{ height: "100%" }}>
+    <View style={{ width: "100%", height: "100%", backgroundColor: "white" }}>
       <SafeAreaView style={{ height: "100%" }}>
         <View style={styles.wrapper}>
           <Text style={styles.title}>Welcome!</Text>
@@ -37,6 +37,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: GLOBAL_CONSTANTS.px,
+    backgroundColor: "white",
   },
   title: {
     marginBottom: 15,

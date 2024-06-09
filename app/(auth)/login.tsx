@@ -29,7 +29,6 @@ export default function Login() {
       setLoading(true);
       const user = await signInWithEmailAndPassword(auth, email, password);
       if (user) {
-        console.log(user);
         router.replace("/");
       }
     } catch (err) {
@@ -51,7 +50,9 @@ export default function Login() {
   };
 
   return (
-    <ThemedView style={{ height: "100%" }}>
+    <ThemedView
+      style={{ width: "100%", height: "100%", backgroundColor: "white" }}
+    >
       <SafeAreaView>
         <View style={styles.wrapper}>
           <Text style={styles.title}>Welcome Back!</Text>
@@ -114,6 +115,7 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     paddingHorizontal: GLOBAL_CONSTANTS.px,
+    backgroundColor: "white",
   },
   title: {
     fontFamily: "NeueMontrealMedium",

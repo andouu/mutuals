@@ -52,7 +52,9 @@ export default function Register() {
   };
 
   return (
-    <ThemedView style={{ height: "100%" }}>
+    <ThemedView
+      style={{ width: "100%", height: "100%", backgroundColor: "white" }}
+    >
       <SafeAreaView>
         <View style={styles.wrapper}>
           <Text style={styles.title}>Sign Up</Text>
@@ -114,6 +116,7 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     padding: 25,
+    backgroundColor: "white",
   },
   title: {
     fontFamily: "NeueMontrealMedium",

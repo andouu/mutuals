@@ -16,9 +16,19 @@ import { auth } from "@/firebase/init";
 
 export default function Details() {
   const [name, setName] = useState<string>("");
+  const [username, setUsername] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
   const router = useRouter();
+
+  const generateDiscriminator = () => {
+    let discriminator = "";
+    for (let i = 0; i < 4; i++) {
+      discriminator += Math.floor(Math.random() * 8 + 1).toString();
+    }
+
+    return discriminator;
+  };
 
   const saveName = async () => {
     try {
@@ -31,6 +41,8 @@ export default function Details() {
       const userInfo = doc(db, "users", auth.currentUser.uid);
       await setDoc(userInfo, {
         name,
+        username,
+        discriminator: generateDiscriminator(),
       });
 
       router.replace("/interests");
@@ -41,8 +53,32 @@ export default function Details() {
     }
   };
 
+  const verifyFields = () => {
+    const nameNoAlphabetical = name.replaceAll(/[a-zA-Z\s]/g, "");
+    if (
+      name.length === 0 ||
+      name.length > 30 ||
+      nameNoAlphabetical.length > 0
+    ) {
+      return false;
+    }
+
+    const usernameNoAlphanumeric = username.replaceAll(/[a-zA-Z0-9]/g, "");
+    if (
+      username.length === 0 ||
+      username.length > 30 ||
+      usernameNoAlphanumeric.length > 0
+    ) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const canContinue = verifyFields();
+
   return (
-    <View style={{ height: "100%" }}>
+    <View style={{ width: "100%", height: "100%", backgroundColor: "white" }}>
       <SafeAreaView style={{ height: "100%" }}>
         <View style={styles.wrapper}>
           <Text style={styles.title}>Details</Text>
@@ -53,21 +89,32 @@ export default function Details() {
             <TextInput
               style={styles.input}
               maxLength={30}
+              value={name}
               onChangeText={(newName) => {
                 setName(newName);
               }}
+            />
+          </View>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Username</Text>
+            <TextInput
+              style={styles.input}
+              maxLength={30}
+              value={username}
+              onChangeText={(newUsername) => {
+                setUsername(newUsername);
+              }}
+              autoCapitalize="none"
             />
           </View>
           <Pressable
             style={({ pressed }) => [
               styles.continueButton,
               pressed ? styles.pressed : undefined,
-              name.length === 0 || name.length > 30 || loading
-                ? styles.disabled
-                : undefined,
+              !canContinue || loading ? styles.disabled : undefined,
             ]}
             onPress={saveName}
-            disabled={name.length === 0 || name.length > 30 || loading}
+            disabled={!canContinue || loading}
           >
             {loading ? (
               <ActivityIndicator color="white" />
@@ -87,6 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: GLOBAL_CONSTANTS.px,
+    backgroundColor: "white",
   },
   title: {
     marginBottom: -5,

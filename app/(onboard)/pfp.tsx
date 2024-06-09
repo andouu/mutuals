@@ -76,7 +76,7 @@ export default function PFP() {
   };
 
   return (
-    <View style={{ height: "100%" }}>
+    <View style={{ width: "100%", height: "100%", backgroundColor: "white" }}>
       <SafeAreaView style={{ height: "100%" }}>
         <View style={styles.wrapper}>
           <Text style={styles.title}>Profile Picture</Text>
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     paddingHorizontal: GLOBAL_CONSTANTS.px,
+    backgroundColor: "white",
   },
   title: {
     marginBottom: -5,

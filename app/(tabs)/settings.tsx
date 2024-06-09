@@ -1,124 +1,214 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { StyleSheet, Image, Platform } from "react-native";
-
-import { Collapsible } from "@/components/Collapsible";
-import { ExternalLink } from "@/components/ExternalLink";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
-import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { GLOBAL_COLORS, GLOBAL_CONSTANTS } from "../globals";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/firestore";
+import { auth } from "@/firebase/init";
+import { storage } from "@/firebase/fireStorage";
+import { getBlob, getDownloadURL, ref } from "firebase/storage";
+import { INTERESTS } from "../(onboard)/interests";
+import { signOut } from "firebase/auth";
+import { useRouter } from "expo-router";
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: "#D0D0D0", dark: "#353636" }}
-      headerImage={
-        <Ionicons size={310} name="code-slash" style={styles.headerImage} />
+type UserInfo = {
+  name: string;
+  username: string;
+  discriminator: string;
+  pfp: string;
+  interests: { id: string; name: string }[];
+};
+
+export default function Settings() {
+  const [userInfo, setUserInfo] = useState<UserInfo>();
+  const [pfp, setPfp] = useState<string>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [loggingOut, setLoggingOut] = useState<boolean>(false);
+
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+
+      await signOut(auth);
+      router.replace("/login");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  useEffect(() => {
+    const getUserInfo = async () => {
+      try {
+        if (!auth.currentUser) {
+          return;
+        }
+
+        setLoading(true);
+
+        const userInfo = await getDoc(doc(db, "users", auth.currentUser.uid));
+
+        if (!userInfo.exists()) {
+          return;
+        }
+
+        setUserInfo(userInfo.data() as UserInfo);
+
+        // get pfp
+        const pfpRef = ref(storage, auth.currentUser.uid + ".jpg");
+        const pfpUrl = await getDownloadURL(pfpRef);
+
+        const pfpRes = await fetch(pfpUrl);
+        const pfpB64 = await pfpRes.text();
+
+        setPfp(pfpB64);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    getUserInfo();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingWrapper}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  return (
+    <ThemedView
+      style={{ width: "100%", height: "100%", backgroundColor: "white" }}
     >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>
-        This app includes example code to help you get started.
-      </ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText>{" "}
-          and{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in{" "}
-          <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{" "}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the
-          web version, press <ThemedText type="defaultSemiBold">w</ThemedText>{" "}
-          in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the{" "}
-          <ThemedText type="defaultSemiBold">@2x</ThemedText> and{" "}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to
-          provide files for different screen densities
-        </ThemedText>
-        <Image
-          source={require("@/assets/images/react-logo.png")}
-          style={{ alignSelf: "center" }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText>{" "}
-          to see how to load{" "}
-          <ThemedText style={{ fontFamily: "SpaceMono" }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{" "}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook
-          lets you inspect what the user's current color scheme is, and so you
-          can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{" "}
-          <ThemedText type="defaultSemiBold">
-            components/HelloWave.tsx
-          </ThemedText>{" "}
-          component uses the powerful{" "}
-          <ThemedText type="defaultSemiBold">
-            react-native-reanimated
-          </ThemedText>{" "}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The{" "}
-              <ThemedText type="defaultSemiBold">
-                components/ParallaxScrollView.tsx
-              </ThemedText>{" "}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+      <SafeAreaView>
+        <View style={styles.wrapper}>
+          <View style={styles.userInfo}>
+            <View style={styles.pfp}>
+              <Image
+                style={styles.pfpImage}
+                source={{ uri: `data:image/jpeg;base64,${pfp}` }}
+              />
+            </View>
+            <Text style={styles.name}>{userInfo?.name}</Text>
+            <Text style={styles.username}>
+              {userInfo?.username + "#" + userInfo?.discriminator}
+            </Text>
+          </View>
+          <Text style={styles.heading}>Interests</Text>
+          <View style={styles.interests}>
+            {userInfo?.interests.map((interest) => (
+              <View key={interest.id} style={styles.interest}>
+                <Text style={styles.interestText}>{interest.name}</Text>
+              </View>
+            ))}
+          </View>
+          <Pressable
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed ? styles.logoutButtonPressed : undefined,
+            ]}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutButtonText}>Log Out</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: "#808080",
-    bottom: -90,
-    left: -35,
-    position: "absolute",
+  loadingWrapper: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
   },
-  titleContainer: {
+  wrapper: {
+    width: "100%",
+    height: "100%",
+    paddingHorizontal: GLOBAL_CONSTANTS.px,
+    backgroundColor: "white",
+  },
+  userInfo: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: 75,
+  },
+  pfp: {
+    width: 150,
+    height: 150,
+    overflow: "hidden",
+    borderRadius: 99,
+    backgroundColor: GLOBAL_COLORS.lightGray,
+  },
+  pfpImage: {
+    width: "100%",
+    height: "100%",
+  },
+  name: {
+    marginTop: 15,
+    marginBottom: 5,
+    fontFamily: "NeueMontrealMedium",
+    fontSize: 25,
+  },
+  username: {
+    marginBottom: 35,
+    color: GLOBAL_COLORS.darkGray,
+    fontFamily: "NeueMontrealBook",
+  },
+  heading: {
+    marginBottom: 10,
+    fontFamily: "NeueMontrealMedium",
+    fontSize: 20,
+  },
+  interests: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
+  },
+  interest: {
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: GLOBAL_COLORS.lightGray,
+    borderRadius: 99,
+  },
+  interestText: {
+    color: GLOBAL_COLORS.darkGray,
+    fontFamily: "NeueMontrealMedium",
+  },
+  logoutButton: {
+    width: "100%",
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 50,
+    borderRadius: 5,
+    backgroundColor: GLOBAL_COLORS.red,
+  },
+  logoutButtonPressed: {
+    opacity: 0.65,
+  },
+  logoutButtonText: {
+    color: "white",
+    fontFamily: "NeueMontrealMedium",
   },
 });
