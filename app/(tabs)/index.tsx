@@ -1,5 +1,5 @@
 import { ThemedView } from "@/components/ThemedView";
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView, StyleSheet, Text } from "react-native";
 
 export default function Invites() {
   return (
@@ -11,4 +11,11 @@ export default function Invites() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  loadingWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "white",
+  },
+});

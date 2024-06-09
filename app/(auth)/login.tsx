@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { GLOBAL_COLORS } from "../globals";
+import { GLOBAL_COLORS, GLOBAL_CONSTANTS } from "../globals";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { FirebaseError } from "firebase/app";
@@ -29,6 +29,7 @@ export default function Login() {
       setLoading(true);
       const user = await signInWithEmailAndPassword(auth, email, password);
       if (user) {
+        console.log(user);
         router.replace("/");
       }
     } catch (err) {
@@ -95,10 +96,10 @@ export default function Login() {
             )}
           </Pressable>
           <View style={styles.actionLinks}>
-            <Link href="register" style={styles.link}>
+            <Link href="/register" style={styles.link}>
               Don't have an account?
             </Link>
-            <Link href="register" style={styles.link}>
+            <Link href="/register" style={styles.link}>
               Forgot password?
             </Link>
           </View>
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   wrapper: {
     height: "100%",
     justifyContent: "center",
-    padding: 25,
+    paddingHorizontal: GLOBAL_CONSTANTS.px,
   },
   title: {
     fontFamily: "NeueMontrealMedium",
@@ -136,6 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderColor: GLOBAL_COLORS.lightGray,
     borderWidth: StyleSheet.hairlineWidth,
+    fontFamily: "NeueMontrealMedium",
   },
   error: {
     marginTop: 15,

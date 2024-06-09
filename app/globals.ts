@@ -6,3 +6,7 @@ export const GLOBAL_COLORS = {
   red: "#CE5252",
   redShadow: "#EDD1D1",
 };
+
+export const GLOBAL_CONSTANTS = {
+  px: 25,
+};

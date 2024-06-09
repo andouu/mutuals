@@ -29,7 +29,7 @@ export default function Register() {
       setLoading(true);
       const user = await createUserWithEmailAndPassword(auth, email, password);
       if (user) {
-        router.replace("/");
+        router.replace("/indicate");
       }
     } catch (err: unknown) {
       const errFB = err as FirebaseError;
@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     borderColor: GLOBAL_COLORS.lightGray,
     borderWidth: StyleSheet.hairlineWidth,
+    fontFamily: "NeueMontrealMedium",
   },
   error: {
     marginTop: 15,
