@@ -67,7 +67,11 @@ export default function Friends() {
 
       // check if already friended
       const friendshipSnapshot = await getDocs(
-        query(collection(db, "friends"), where("friendUid", "==", otherUserUid))
+        query(
+          collection(db, "friends"),
+          where("friendUid", "==", otherUserUid),
+          where("userUid", "==", auth.currentUser.uid)
+        )
       );
       if (friendshipSnapshot.size > 0) {
         setSearchError("You are already friends with this person!");
